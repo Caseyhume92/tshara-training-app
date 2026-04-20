@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ec4899">
+<link rel="manifest" href="./manifest.json">
+<title>Tshara Training</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root {
+  --bg: #0d0d0f;
+  --surface: #18181b;
+  --surface2: #222226;
+  --pink: #ec4899;
+  --pink-dim: #ec489933;
+  --blue: #3b82f6;
+  --blue-dim: #3b82f622;
+  --green: #22c55e;
+  --green-dim: #22c55e22;
+  --text: #f0f0f5;
+  --text-dim: #9ca3af;
+  --border: #2a2a30;
+  --radius: 12px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+input[type="number"] {
+  font-family: 'Space Mono', monospace;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 18px;
+  text-align: center;
+  padding: 10px 4px;
+  width: 72px;
+  min-height: 44px;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+input[type="number"]:focus { outline: none; border-color: var(--pink); }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.mono { font-family: 'Space Mono', monospace; }
+.video-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--pink);
+  text-decoration: none; white-space: nowrap; min-height: 32px;
+}
+.video-link svg { width: 14px; height: 14px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── PROGRAM DATA ───
+const CORE_REHAB = [
+  { name: 'Diaphragmatic Breathing with TA Activation', reps: '10 reps', note: 'Lying on back, knees bent. Inhale, let belly expand. Exhale, draw belly button toward spine. Hold 5 sec.', video: 'https://www.youtube.com/results?search_query=diaphragmatic+breathing+postpartum+core+activation' },
+  { name: 'Dead Bug (modified)', reps: '8 reps per side', note: 'Lying on back, arms to ceiling, knees at 90 degrees. Lower one leg slowly. Keep lower back pressed into floor. Stop if any abdominal doming.', video: 'https://www.youtube.com/watch?v=bxn9FBrt4-A' },
+  { name: 'Bird Dog', reps: '6 reps per side', note: 'On hands and knees. Extend opposite arm and leg. Hold 3 seconds. Keep hips level.', video: 'https://www.youtube.com/watch?v=ZdAHe9_HeEw' },
+];
+
+const COOLDOWN = [
+  { name: 'Hamstring Stretch', reps: '30 sec per leg', note: 'Foot up on bench. Keep leg straight, lean forward gently.' },
+  { name: 'Hip Flexor Stretch', reps: '30 sec per leg', note: 'Half kneeling lunge position. Push hips forward gently. Important after pregnancy as hip flexors tighten significantly.' },
+];
+
+const PROGRAM = [
+  {
+    day: 1, label: 'Posterior Chain & Back', tag: 'GLUTES & BACK', tagColor: '#ec4899', tagBg: '#ec489933',
+    circuitA: {
+      name: 'Circuit A', rounds: 3, rest: 60,
+      exercises: [
+        { name: 'Dumbbell Romanian Deadlift', reps: '10', note: 'Light weight to start. Feel the hamstring stretch. Best exercise for the back of the thigh.', video: 'https://www.youtube.com/watch?v=FQKfr1YDhEk' },
+        { name: 'Band Pull-Apart', reps: '15', note: 'Arms straight out, pull band to chest. Squeeze shoulder blades.', video: 'https://www.youtube.com/watch?v=smSSXITNpCI' },
+        { name: 'Glute Bridge', reps: '12', note: 'Bodyweight or dumbbell on hips. Squeeze glutes at top for 2 seconds.', video: 'https://www.youtube.com/watch?v=29OfN4ztW_g' },
+      ]
+    },
+    circuitB: {
+      name: 'Circuit B', rounds: 3, rest: 60,
+      exercises: [
+        { name: 'Dumbbell Reverse Lunge', reps: '10/leg', note: 'Step back, not forward. Easier on knees, loads glutes and hamstrings more.', video: 'https://www.youtube.com/results?search_query=dumbbell+reverse+lunge+form+beginner' },
+        { name: 'Single Arm Dumbbell Row', reps: '10/arm', note: 'Great for back. Use the bench for support.', video: 'https://www.youtube.com/results?search_query=single+arm+dumbbell+row+bench+supported+form' },
+        { name: 'Band Hamstring Curl', reps: '12', note: 'Band around ankles, attached to bench leg. Direct hamstring isolation.', video: 'https://www.youtube.com/results?search_query=lying+band+hamstring+curl+exercise' },
+      ]
+    }
+  },
+  {
+    day: 2, label: 'Upper Body & Arms', tag: 'UPPER BODY', tagColor: '#3b82f6', tagBg: '#3b82f622',
+    circuitA: {
+      name: 'Circuit A', rounds: 3, rest: 60,
+      exercises: [
+        { name: 'Dumbbell Bench Press', reps: '10', note: 'Flat or slight incline. Start light, learn the movement.', video: 'https://www.youtube.com/results?search_query=dumbbell+bench+press+beginner+form+women' },
+        { name: 'Band Assisted Pull-Up', reps: '5-8', note: 'Use a band for assistance, or jump up and lower slowly for 5 seconds. Builds back width.', video: 'https://www.youtube.com/results?search_query=band+assisted+pull+up+tutorial+beginner' },
+        { name: 'Dumbbell Bicep Curl', reps: '12', note: 'Controlled tempo. No swinging.', video: 'https://www.youtube.com/results?search_query=dumbbell+bicep+curl+proper+form+beginner' },
+      ]
+    },
+    circuitB: {
+      name: 'Circuit B', rounds: 3, rest: 60,
+      exercises: [
+        { name: 'Dumbbell Shoulder Press', reps: '10', note: 'Seated. Light weight, full range of motion.', video: 'https://www.youtube.com/results?search_query=seated+dumbbell+shoulder+press+form+beginner' },
+        { name: 'Tricep Pushdown', reps: '12', note: 'Pulley, rope. Squeeze at the bottom.', video: 'https://www.youtube.com/results?search_query=tricep+rope+pushdown+form+tutorial' },
+        { name: 'Band Face Pull', reps: '15', note: 'Pull to forehead, squeeze shoulder blades together.', video: 'https://www.youtube.com/results?search_query=resistance+band+face+pull+tutorial' },
+      ]
+    }
+  },
+  {
+    day: 3, label: 'Full Body + Glute & Hamstring Focus', tag: 'FULL BODY', tagColor: '#22c55e', tagBg: '#22c55e22',
+    circuitA: {
+      name: 'Circuit A', rounds: 3, rest: 60,
+      exercises: [
+        { name: 'Dumbbell Goblet Squat', reps: '10', note: 'Hold one dumbbell at chest. Full depth if comfortable.', video: 'https://www.youtube.com/results?search_query=dumbbell+goblet+squat+beginner+form' },
+        { name: 'Dumbbell Floor Press', reps: '10', note: 'Lying on floor. Limited range is easier on shoulders for beginners.', video: 'https://www.youtube.com/results?search_query=dumbbell+floor+press+form+tutorial' },
+        { name: 'Single Leg Stiff-Leg Deadlift', reps: '8/leg', note: 'Hand on bench for balance. Massive hamstring and glute engagement.', video: 'https://www.youtube.com/results?search_query=single+leg+rdl+dumbbell+beginner+form' },
+      ]
+    },
+    circuitB: {
+      name: 'Circuit B', rounds: 3, rest: 60,
+      exercises: [
+        { name: 'Band Hip Thrust', reps: '12', note: 'Back against bench, band above knees. Squeeze glutes hard at top for 2 seconds.', video: 'https://www.youtube.com/watch?v=29OfN4ztW_g' },
+        { name: 'Band Lateral Raise', reps: '12', note: 'Arms toning.', video: 'https://www.youtube.com/results?search_query=resistance+band+lateral+raise+form' },
+        { name: 'Dumbbell Hammer Curl', reps: '12', note: 'Neutral grip. Good for arm shape.', video: 'https://www.youtube.com/results?search_query=dumbbell+hammer+curl+form+beginner' },
+      ]
+    }
+  }
+];
+
+// ─── HELPERS ───
+function loadJSON(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+}
+function saveJSON(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = 880; osc.type = 'square'; gain.gain.value = 0.3;
+    osc.start(); osc.stop(ctx.currentTime + 0.3);
+    setTimeout(() => {
+      const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+      o2.connect(g2); g2.connect(ctx.destination);
+      o2.frequency.value = 1100; o2.type = 'square'; g2.gain.value = 0.3;
+      o2.start(); o2.stop(ctx.currentTime + 0.4);
+    }, 350);
+  } catch(e) {}
+}
+
+function VideoLink({ url }) {
+  if (!url) return null;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="video-link" onClick={e => e.stopPropagation()}>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      Watch
+    </a>
+  );
+}
+
+// ─── MAIN APP ───
+function App() {
+  const [tab, setTab] = useState('workout');
+  const [currentDay, setCurrentDay] = useState(() => loadJSON('tshara_currentDay', 1));
+  const [sessions, setSessions] = useState(() => loadJSON('tshara_sessions', []));
+  const [activeSession, setActiveSession] = useState(() => loadJSON('tshara_activeSession', null));
+  const [showSummary, setShowSummary] = useState(null);
+
+  useEffect(() => { saveJSON('tshara_currentDay', currentDay); }, [currentDay]);
+  useEffect(() => { saveJSON('tshara_sessions', sessions); }, [sessions]);
+  useEffect(() => { saveJSON('tshara_activeSession', activeSession); }, [activeSession]);
+
+  const getLastExerciseData = useCallback((exerciseName, dayNumber) => {
+    for (let i = sessions.length - 1; i >= 0; i--) {
+      const s = sessions[i];
+      if (s.dayNumber === dayNumber) {
+        const ex = s.exercises.find(e => e.name === exerciseName);
+        if (ex && ex.rounds && ex.rounds.some(r => r.weight > 0 || r.reps > 0)) return ex.rounds;
+      }
+    }
+    return null;
+  }, [sessions]);
+
+  const startSession = () => {
+    const dayData = PROGRAM[currentDay - 1];
+    const buildCircuitExercises = (circuit) => circuit.exercises.map(ex => ({
+      name: ex.name, targetReps: ex.reps, note: ex.note, video: ex.video,
+      numRounds: circuit.rounds, rest: circuit.rest, circuit: circuit.name,
+      rounds: Array.from({ length: circuit.rounds }, (_, i) => {
+        const lastData = getLastExerciseData(ex.name, currentDay);
+        return { weight: lastData && lastData[i] ? lastData[i].weight : 0, reps: 0, done: false };
+      })
+    }));
+    const session = {
+      id: Date.now(), startTime: Date.now(), dayNumber: currentDay, dayLabel: dayData.label,
+      coreComplete: false, cooldownComplete: false,
+      exercises: [...buildCircuitExercises(dayData.circuitA), ...buildCircuitExercises(dayData.circuitB)]
+    };
+    setActiveSession(session);
+    setTab('workout');
+  };
+
+  const updateRound = (exIdx, roundIdx, field, value) => {
+    setActiveSession(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      next.exercises[exIdx].rounds[roundIdx][field] = parseFloat(value) || 0;
+      const r = next.exercises[exIdx].rounds[roundIdx];
+      if (r.weight > 0 && r.reps > 0) r.done = true;
+      return next;
+    });
+  };
+
+  const setCoreComplete = () => {
+    setActiveSession(prev => ({ ...prev, coreComplete: true }));
+  };
+
+  const setCooldownComplete = () => {
+    setActiveSession(prev => ({ ...prev, cooldownComplete: true }));
+  };
+
+  const finishSession = () => {
+    if (!activeSession) return;
+    let totalVolume = 0;
+    activeSession.exercises.forEach(ex => {
+      ex.rounds.forEach(r => { totalVolume += (r.weight || 0) * (r.reps || 0); });
+    });
+    const duration = Math.round((Date.now() - activeSession.startTime) / 60000);
+    const completed = {
+      id: activeSession.id, date: new Date().toISOString(),
+      dayNumber: activeSession.dayNumber, dayLabel: activeSession.dayLabel,
+      exercises: activeSession.exercises.map(ex => ({
+        name: ex.name, targetReps: ex.targetReps, circuit: ex.circuit,
+        rounds: ex.rounds.map(r => ({ weight: r.weight, reps: r.reps }))
+      })),
+      totalVolume, duration
+    };
+    setSessions(prev => [...prev, completed]);
+    setShowSummary({ dayLabel: completed.dayLabel, dayNumber: completed.dayNumber, totalVolume, duration, date: new Date().toLocaleDateString() });
+    setCurrentDay(prev => prev >= 3 ? 1 : prev + 1);
+    setActiveSession(null);
+  };
+
+  if (showSummary) return <SummaryScreen data={showSummary} onClose={() => setShowSummary(null)} />;
+
+  return (
+    <div style={{ paddingBottom: 72, minHeight: '100vh' }}>
+      {tab === 'workout' && (
+        activeSession
+          ? <ActiveWorkout session={activeSession} updateRound={updateRound} finishSession={finishSession} getLastExerciseData={getLastExerciseData} setCoreComplete={setCoreComplete} setCooldownComplete={setCooldownComplete} />
+          : <HomeScreen currentDay={currentDay} sessions={sessions} onStart={startSession} />
+      )}
+      {tab === 'nutrition' && <NutritionScreen />}
+      {tab === 'history' && <HistoryScreen sessions={sessions} setSessions={setSessions} />}
+      {tab === 'settings' && <SettingsScreen currentDay={currentDay} setCurrentDay={setCurrentDay} sessions={sessions} setSessions={setSessions} setActiveSession={setActiveSession} />}
+      <BottomNav tab={tab} setTab={setTab} />
+    </div>
+  );
+}
+
+// ─── HOME SCREEN ───
+function HomeScreen({ currentDay, sessions, onStart }) {
+  const day = PROGRAM[currentDay - 1];
+  const recent = [...sessions].reverse().slice(0, 5);
+  return (
+    <div>
+      <div style={{ padding: '48px 20px 24px', borderBottom: '1px solid var(--border)' }}>
+        <h1 className="mono" style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5 }}>TSHARA HUME</h1>
+        <div style={{ color: 'var(--pink)', fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', marginTop: 2 }}>Training Tracker</div>
+      </div>
+      <div style={{ padding: 20 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Next Session</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span className="mono" style={{ fontSize: 28, fontWeight: 700, color: day.tagColor }}>Day {day.day}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, background: day.tagBg, color: day.tagColor }}>{day.tag}</span>
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>{day.label}</div>
+          <button onClick={onStart} style={{
+            width: '100%', background: 'var(--pink)', color: 'white', border: 'none', borderRadius: 'var(--radius)',
+            padding: '14px 0', fontSize: 16, fontWeight: 700, cursor: 'pointer', letterSpacing: 1, minHeight: 50
+          }}>START SESSION</button>
+        </div>
+        {recent.length > 0 && (
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>Recent Sessions</div>
+            {recent.map(s => {
+              const d = PROGRAM[s.dayNumber - 1];
+              return (
+                <div key={s.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>Day {s.dayNumber}: {s.dayLabel}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{new Date(s.date).toLocaleDateString()}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="mono" style={{ fontSize: 14, fontWeight: 700 }}>{s.totalVolume.toLocaleString()}kg</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{s.duration} min</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ACTIVE WORKOUT ───
+function ActiveWorkout({ session, updateRound, finishSession, getLastExerciseData, setCoreComplete, setCooldownComplete }) {
+  const [timer, setTimer] = useState(null);
+  const [expandedEx, setExpandedEx] = useState(null);
+  const day = PROGRAM[session.dayNumber - 1];
+
+  const circuitAExercises = session.exercises.filter(e => e.circuit === 'Circuit A');
+  const circuitBExercises = session.exercises.filter(e => e.circuit === 'Circuit B');
+  const circuitADone = circuitAExercises.every(ex => ex.rounds.every(r => r.done));
+  const circuitBDone = circuitBExercises.every(ex => ex.rounds.every(r => r.done));
+  const completedEx = session.exercises.filter(ex => ex.rounds.every(r => r.done)).length;
+  const hasAnyData = session.exercises.some(ex => ex.rounds.some(r => r.weight > 0 && r.reps > 0));
+
+  return (
+    <div>
+      <div style={{ padding: '48px 20px 12px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, background: day.tagBg, color: day.tagColor }}>{day.tag}</span>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Day {day.day}: {day.label}</span>
+        </div>
+        <div style={{ background: 'var(--surface2)', borderRadius: 6, height: 6, overflow: 'hidden' }}>
+          <div style={{ height: '100%', background: 'var(--pink)', borderRadius: 6, width: `${(completedEx / session.exercises.length) * 100}%`, transition: 'width 0.3s' }} />
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>{completedEx}/{session.exercises.length} exercises complete</div>
+      </div>
+
+      <div style={{ padding: '12px 16px 120px' }}>
+        {/* CORE REHAB */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--pink)', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>Core Rehabilitation — 3 min</div>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', opacity: session.coreComplete ? 0.5 : 1 }}>
+            {CORE_REHAB.map((ex, i) => (
+              <div key={i} style={{ padding: '12px 16px', borderBottom: i < 2 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{ex.name}</span>
+                  <VideoLink url={ex.video} />
+                </div>
+                <div className="mono" style={{ fontSize: 12, color: 'var(--pink)', marginBottom: 4 }}>{ex.reps}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', fontStyle: 'italic' }}>{ex.note}</div>
+              </div>
+            ))}
+            {!session.coreComplete && (
+              <button onClick={setCoreComplete} style={{
+                width: '100%', background: 'var(--surface2)', border: 'none', borderTop: '1px solid var(--border)',
+                color: 'var(--pink)', fontSize: 14, fontWeight: 700, padding: '14px 0', cursor: 'pointer', minHeight: 48
+              }}>CORE DONE ✓</button>
+            )}
+          </div>
+        </div>
+
+        {/* CIRCUIT A */}
+        <CircuitSection
+          label="Circuit A"
+          subtitle="3 rounds — 60 sec rest between rounds"
+          exercises={circuitAExercises}
+          session={session}
+          getLastExerciseData={getLastExerciseData}
+          updateRound={updateRound}
+          expandedEx={expandedEx}
+          setExpandedEx={setExpandedEx}
+          onTimer={() => setTimer({ duration: 60, remaining: 60 })}
+          globalExOffset={0}
+          done={circuitADone}
+        />
+
+        {/* CIRCUIT B */}
+        <CircuitSection
+          label="Circuit B"
+          subtitle="3 rounds — 60 sec rest between rounds"
+          exercises={circuitBExercises}
+          session={session}
+          getLastExerciseData={getLastExerciseData}
+          updateRound={updateRound}
+          expandedEx={expandedEx}
+          setExpandedEx={setExpandedEx}
+          onTimer={() => setTimer({ duration: 60, remaining: 60 })}
+          globalExOffset={circuitAExercises.length}
+          done={circuitBDone}
+        />
+
+        {/* COOL DOWN */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>Cool-Down — 2 min</div>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', opacity: session.cooldownComplete ? 0.5 : 1 }}>
+            {COOLDOWN.map((ex, i) => (
+              <div key={i} style={{ padding: '12px 16px', borderBottom: i < 1 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{ex.name}</div>
+                <div className="mono" style={{ fontSize: 12, color: 'var(--green)', marginBottom: 4 }}>{ex.reps}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', fontStyle: 'italic' }}>{ex.note}</div>
+              </div>
+            ))}
+            {!session.cooldownComplete && (
+              <button onClick={setCooldownComplete} style={{
+                width: '100%', background: 'var(--surface2)', border: 'none', borderTop: '1px solid var(--border)',
+                color: 'var(--green)', fontSize: 14, fontWeight: 700, padding: '14px 0', cursor: 'pointer', minHeight: 48
+              }}>STRETCHES DONE ✓</button>
+            )}
+          </div>
+        </div>
+
+        {hasAnyData && (
+          <button onClick={finishSession} style={{
+            width: '100%', background: 'var(--green)', color: '#000', border: 'none', borderRadius: 'var(--radius)',
+            padding: '16px 0', fontSize: 16, fontWeight: 700, cursor: 'pointer', marginTop: 8, minHeight: 50
+          }}>FINISH WORKOUT</button>
+        )}
+      </div>
+
+      {timer && <TimerModal duration={timer.duration} onClose={() => setTimer(null)} />}
+    </div>
+  );
+}
+
+// ─── CIRCUIT SECTION ───
+function CircuitSection({ label, subtitle, exercises, session, getLastExerciseData, updateRound, expandedEx, setExpandedEx, onTimer, globalExOffset, done }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+        <div style={{ fontSize: 11, color: 'var(--pink)', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>{label}</div>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 10 }}>{subtitle}</div>
+
+      {exercises.map((ex, localIdx) => {
+        const exIdx = globalExOffset + localIdx;
+        const isExpanded = expandedEx === exIdx;
+        const allDone = ex.rounds.every(r => r.done);
+        const lastData = getLastExerciseData(ex.name, session.dayNumber);
+
+        return (
+          <div key={exIdx} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: 10, overflow: 'hidden', opacity: allDone && !isExpanded ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+            <div onClick={() => setExpandedEx(isExpanded ? null : exIdx)} style={{
+              padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', WebkitTapHighlightColor: 'transparent'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                {allDone && <span style={{ color: 'var(--green)', fontSize: 16 }}>&#10003;</span>}
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{ex.name}</div>
+                  <div className="mono" style={{ fontSize: 12, color: 'var(--text-dim)' }}>{ex.numRounds} rounds x {ex.targetReps} reps</div>
+                </div>
+              </div>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-dim)', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+
+            {isExpanded && (
+              <div style={{ padding: '0 16px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                  <VideoLink url={ex.video} />
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)', fontStyle: 'italic', marginBottom: 12, padding: '8px 12px', background: 'var(--surface2)', borderRadius: 8 }}>{ex.note}</div>
+
+                {lastData ? (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, color: 'var(--pink)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>Last Time</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {lastData.map((r, i) => (
+                        <div key={i} className="mono" style={{ background: 'var(--pink-dim)', borderRadius: 6, padding: '4px 10px', fontSize: 13, fontWeight: 700, color: 'var(--pink)' }}>
+                          R{i+1}: {r.weight}kg x {r.reps}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 12, fontStyle: 'italic' }}>First time — start light</div>
+                )}
+
+                {ex.rounds.map((r, rIdx) => (
+                  <div key={rIdx} style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: r.done ? 'var(--green)' : 'var(--text-dim)', marginBottom: 6 }}>
+                      Round {rIdx + 1}/{ex.numRounds} {r.done ? '✓' : ''}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-dim)', width: 24 }}>kg</div>
+                      <input type="number" inputMode="decimal" step="0.5" value={r.weight || ''} placeholder="0"
+                        onChange={e => updateRound(exIdx, rIdx, 'weight', e.target.value)} />
+                      <div style={{ fontSize: 11, color: 'var(--text-dim)', width: 30 }}>reps</div>
+                      <input type="number" inputMode="numeric" value={r.reps || ''} placeholder="0"
+                        onChange={e => updateRound(exIdx, rIdx, 'reps', e.target.value)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <button onClick={onTimer} style={{
+        width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+        padding: '12px 0', fontSize: 14, fontWeight: 700, color: 'var(--pink)', cursor: 'pointer', marginBottom: 8, minHeight: 48
+      }}>REST 60s</button>
+    </div>
+  );
+}
+
+// ─── TIMER MODAL ───
+function TimerModal({ duration, onClose }) {
+  const [remaining, setRemaining] = useState(duration);
+  const [finished, setFinished] = useState(false);
+  const intervalRef = useRef(null);
+  const wakeLockRef = useRef(null);
+
+  useEffect(() => {
+    (async () => { try { wakeLockRef.current = await navigator.wakeLock.request('screen'); } catch(e) {} })();
+    intervalRef.current = setInterval(() => {
+      setRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current);
+          setFinished(true);
+          playBeep();
+          try { navigator.vibrate([200, 100, 200]); } catch(e) {}
+          setTimeout(onClose, 3000);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      clearInterval(intervalRef.current);
+      if (wakeLockRef.current) wakeLockRef.current.release().catch(() => {});
+    };
+  }, []);
+
+  const pct = remaining / duration;
+  let bgColor = '#3b82f6';
+  if (remaining <= 5) bgColor = '#ef4444';
+  else if (remaining <= 15) bgColor = '#f97316';
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', background: bgColor, transition: 'background 0.5s',
+      cursor: 'pointer', WebkitTapHighlightColor: 'transparent'
+    }}>
+      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
+        {finished ? 'GO' : 'REST'}
+      </div>
+      <div className="mono" style={{ fontSize: 96, fontWeight: 700, color: 'white', lineHeight: 1 }}>
+        {remaining}
+      </div>
+      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginTop: 24 }}>
+        {finished ? 'Tap to dismiss' : 'Tap to skip'}
+      </div>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(0,0,0,0.2)' }}>
+        <div style={{ height: '100%', background: 'rgba(255,255,255,0.4)', width: `${pct * 100}%`, transition: 'width 1s linear' }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── SUMMARY SCREEN ───
+function SummaryScreen({ data, onClose }) {
+  const day = PROGRAM[data.dayNumber - 1];
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>&#11088;</div>
+      <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Session Complete!</h2>
+      <div style={{ color: 'var(--text-dim)', fontSize: 14, marginBottom: 24 }}>{data.date}</div>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, width: '100%', maxWidth: 320 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, background: day.tagBg, color: day.tagColor }}>{day.tag}</span>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Day {data.dayNumber}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div className="mono" style={{ fontSize: 24, fontWeight: 700 }}>{data.totalVolume.toLocaleString()}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 1 }}>kg volume</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div className="mono" style={{ fontSize: 24, fontWeight: 700 }}>{data.duration}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 1 }}>minutes</div>
+          </div>
+        </div>
+      </div>
+      <button onClick={onClose} style={{
+        marginTop: 24, background: 'var(--pink)', color: 'white', border: 'none', borderRadius: 'var(--radius)',
+        padding: '14px 48px', fontSize: 16, fontWeight: 700, cursor: 'pointer', minHeight: 50
+      }}>DONE</button>
+    </div>
+  );
+}
+
+// ─── NUTRITION SCREEN ───
+function NutritionScreen() {
+  return (
+    <div>
+      <div style={{ padding: '48px 20px 24px', borderBottom: '1px solid var(--border)' }}>
+        <h1 className="mono" style={{ fontSize: 22, fontWeight: 700 }}>NUTRITION</h1>
+        <div style={{ color: 'var(--pink)', fontSize: 13, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', marginTop: 2 }}>Postpartum Recovery</div>
+      </div>
+
+      <div style={{ background: '#ec489915', border: '1px solid #ec489944', borderRadius: 'var(--radius)', margin: '16px 16px 0', padding: 16, fontSize: 13 }}>
+        <strong style={{ color: 'var(--pink)' }}>Important:</strong>
+        <span style={{ color: 'var(--text-dim)' }}> Do not go below 1,800 calories while breastfeeding. This protects milk supply. Slow and steady fat loss of 0.3-0.5kg per week is the target.</span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, padding: '16px 16px 0' }}>
+        {[
+          { value: '1,800', label: 'Min Calories', highlight: true },
+          { value: '100g', label: 'Protein', highlight: true },
+          { value: '3L+', label: 'Water', highlight: false },
+        ].map((m, i) => (
+          <div key={i} style={{ background: 'var(--surface)', border: `1px solid ${m.highlight ? 'var(--pink)' : 'var(--border)'}`, borderRadius: 'var(--radius)', padding: 14, textAlign: 'center' }}>
+            <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: m.highlight ? 'var(--pink)' : 'var(--text)' }}>{m.value}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 }}>{m.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ padding: '20px 16px 0' }}>
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>Daily Meals</div>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }}>
+          {[
+            { name: 'Breakfast', desc: '30-35g protein. Eggs, toast, yoghurt, fruit. Whatever time works around the baby.' },
+            { name: 'Lunch', desc: '30-35g protein. Chicken, fish, beef, or eggs with rice, potato, or pasta. Vegetables.' },
+            { name: 'Dinner', desc: '30-35g protein. Same approach as lunch. Evening carbs for recovery and sleep.' },
+          ].map((meal, i) => (
+            <div key={i} style={{ padding: '12px 0', borderBottom: i < 2 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{meal.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{meal.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: '20px 16px 0' }}>
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>Supplements</div>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16, fontSize: 13 }}>
+          <p style={{ color: 'var(--text-dim)' }}><strong style={{ color: 'var(--text)' }}>No creatine</strong> while breastfeeding.</p>
+        </div>
+      </div>
+
+      <div style={{ padding: '20px 16px 20px' }}>
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>Weekly Check</div>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16, fontSize: 13 }}>
+          <p style={{ color: 'var(--text-dim)', marginBottom: 8 }}>Every <strong style={{ color: 'var(--text)' }}>Monday morning</strong> after waking, before eating.</p>
+          <p style={{ color: 'var(--text-dim)', marginBottom: 8 }}><strong style={{ color: 'var(--text)' }}>Target:</strong> 0.3-0.5kg loss per week.</p>
+          <p style={{ color: 'var(--text-dim)', marginBottom: 8 }}><strong style={{ color: 'var(--text)' }}>Losing too fast?</strong> (&gt;0.5kg/week) Eat a bit more.</p>
+          <p style={{ color: 'var(--text-dim)' }}><strong style={{ color: 'var(--text)' }}>Not losing after 2 weeks?</strong> Reduce by only 100 calories.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── HISTORY SCREEN ───
+function HistoryScreen({ sessions, setSessions }) {
+  const [expanded, setExpanded] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const sorted = [...sessions].reverse();
+
+  const deleteSession = (id) => {
+    setSessions(prev => prev.filter(s => s.id !== id));
+    setConfirmDelete(null); setExpanded(null);
+  };
+
+  return (
+    <div>
+      <div style={{ padding: '48px 20px 24px', borderBottom: '1px solid var(--border)' }}>
+        <h1 className="mono" style={{ fontSize: 22, fontWeight: 700 }}>HISTORY</h1>
+        <div style={{ color: 'var(--text-dim)', fontSize: 13, marginTop: 4 }}>{sessions.length} sessions logged</div>
+      </div>
+      <div style={{ padding: '12px 16px' }}>
+        {sorted.length === 0 && <div style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 40, fontSize: 14 }}>No sessions yet. You've got this!</div>}
+        {sorted.map(s => {
+          const isExpanded = expanded === s.id;
+          const day = PROGRAM[s.dayNumber - 1];
+          return (
+            <div key={s.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: 10, overflow: 'hidden' }}>
+              <div onClick={() => setExpanded(isExpanded ? null : s.id)} style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: 1, background: day.tagBg, color: day.tagColor }}>{day.tag}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>Day {s.dayNumber}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{new Date(s.date).toLocaleDateString()}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div className="mono" style={{ fontSize: 14, fontWeight: 700 }}>{s.totalVolume.toLocaleString()}kg</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{s.duration} min</div>
+                </div>
+              </div>
+              {isExpanded && (
+                <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
+                  {s.exercises.map((ex, i) => (
+                    <div key={i} style={{ padding: '10px 0', borderBottom: i < s.exercises.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{ex.name}</div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {ex.rounds.map((r, j) => (
+                          <div key={j} className="mono" style={{ background: 'var(--surface2)', borderRadius: 6, padding: '3px 8px', fontSize: 12 }}>
+                            R{j+1}: {r.weight}kg x {r.reps}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {confirmDelete === s.id ? (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                      <button onClick={() => deleteSession(s.id)} style={{ flex: 1, background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44 }}>Yes, delete</button>
+                      <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, background: 'var(--surface2)', color: 'var(--text-dim)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44 }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDelete(s.id)} style={{ width: '100%', background: 'none', border: '1px solid #ef444444', borderRadius: 8, padding: '8px 0', fontSize: 12, color: '#ef4444', cursor: 'pointer', marginTop: 12, minHeight: 44 }}>Delete Session</button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── SETTINGS SCREEN ───
+function SettingsScreen({ currentDay, setCurrentDay, sessions, setSessions, setActiveSession }) {
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  const exportData = () => {
+    const data = { currentDay, sessions, exportDate: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `tshara-training-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  const clearAll = () => {
+    setSessions([]); setActiveSession(null); setCurrentDay(1);
+    localStorage.removeItem('tshara_sessions');
+    localStorage.removeItem('tshara_activeSession');
+    localStorage.removeItem('tshara_currentDay');
+    setConfirmClear(false);
+  };
+
+  return (
+    <div>
+      <div style={{ padding: '48px 20px 24px', borderBottom: '1px solid var(--border)' }}>
+        <h1 className="mono" style={{ fontSize: 22, fontWeight: 700 }}>SETTINGS</h1>
+      </div>
+      <div style={{ padding: 16 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Current Rotation</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[1, 2, 3].map(d => (
+              <button key={d} onClick={() => setCurrentDay(d)} style={{
+                flex: 1, padding: '12px 0', borderRadius: 8, border: `1px solid ${currentDay === d ? 'var(--pink)' : 'var(--border)'}`,
+                background: currentDay === d ? 'var(--pink-dim)' : 'var(--surface2)',
+                color: currentDay === d ? 'var(--pink)' : 'var(--text-dim)',
+                fontSize: 14, fontWeight: 700, cursor: 'pointer', minHeight: 44
+              }}>Day {d}</button>
+            ))}
+          </div>
+        </div>
+        <button onClick={exportData} style={{
+          width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+          padding: '14px 16px', fontSize: 14, fontWeight: 600, color: 'var(--text)', cursor: 'pointer', marginBottom: 12, textAlign: 'left', minHeight: 50
+        }}>Export Data as JSON</button>
+        {confirmClear ? (
+          <div style={{ background: 'var(--surface)', border: '1px solid #ef444444', borderRadius: 'var(--radius)', padding: 16 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#ef4444', marginBottom: 8 }}>Clear all data?</div>
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 12 }}>This will delete all session history and reset the rotation. This cannot be undone.</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={clearAll} style={{ flex: 1, background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, padding: '12px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44 }}>Yes, clear everything</button>
+              <button onClick={() => setConfirmClear(false)} style={{ flex: 1, background: 'var(--surface2)', color: 'var(--text-dim)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 0', fontSize: 13, fontWeight: 600, cursor: 'pointer', minHeight: 44 }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmClear(true)} style={{
+            width: '100%', background: 'none', border: '1px solid #ef444444', borderRadius: 'var(--radius)',
+            padding: '14px 16px', fontSize: 14, fontWeight: 600, color: '#ef4444', cursor: 'pointer', textAlign: 'left', minHeight: 50
+          }}>Clear All Data</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── BOTTOM NAV ───
+function BottomNav({ tab, setTab }) {
+  const tabs = [
+    { id: 'workout', label: 'Workout', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20"><path d="M6.5 6.5h11M6.5 12h11M6.5 17.5h11"/><circle cx="3" cy="6.5" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="17.5" r="1"/></svg> },
+    { id: 'nutrition', label: 'Nutrition', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20"><path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3"/></svg> },
+    { id: 'history', label: 'History', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> },
+    { id: 'settings', label: 'Settings', icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg> },
+  ];
+  return (
+    <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--surface)',
+      borderTop: '1px solid var(--border)', display: 'flex', zIndex: 100,
+      paddingBottom: 'env(safe-area-inset-bottom)'
+    }}>
+      {tabs.map(t => (
+        <button key={t.id} onClick={() => setTab(t.id)} style={{
+          flex: 1, background: 'none', border: 'none', color: tab === t.id ? 'var(--pink)' : 'var(--text-dim)',
+          fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600, padding: '10px 4px 8px',
+          cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3
+        }}>
+          {t.icon}
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── MOUNT ───
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+// ─── SERVICE WORKER ───
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

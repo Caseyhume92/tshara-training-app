@@ -1,0 +1,15 @@
+{
+  "name": "Tshara's Training Tracker",
+  "short_name": "Tshara Training",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0d0d0f",
+  "theme_color": "#ec4899",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%23ec4899'/><text x='96' y='120' text-anchor='middle' font-family='sans-serif' font-weight='700' font-size='80' fill='white'>TH</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
